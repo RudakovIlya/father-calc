@@ -99,7 +99,9 @@ const CalculationDetail = () => {
     );
   }
 
-  const { createdAt, inputs, results } = entry;
+  const { createdAt, inputs, results, comment } = entry;
+
+  console.log("comment", comment);
 
   return (
     <div className="space-y-8">
@@ -171,6 +173,14 @@ const CalculationDetail = () => {
           ))}
         </div>
       </SectionCard>
+
+      {comment ? (
+        <SectionCard title="Комментарий">
+          <p className="text-2xl text-gray-200 whitespace-pre-line">
+            {comment}
+          </p>
+        </SectionCard>
+      ) : null}
     </div>
   );
 };

@@ -24,6 +24,7 @@ const CalculatorDashboard = () => {
     error: historyError,
     addCalculation,
     deleteCalculation,
+    clearAllCalculations,
   } = useCalculationHistory();
 
   const [activeTab, setActiveTab] = useState(TABS[0].id);
@@ -33,6 +34,10 @@ const CalculatorDashboard = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [needsComment, setNeedsComment] = useState(false);
+  const [comment, setComment] = useState("");
+  const [isClearing, setIsClearing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const changeHandlers = useMemo(
     () => ({
@@ -192,6 +197,7 @@ const CalculatorDashboard = () => {
         createdAt,
         inputs: { ...inputs },
         results: { ...calculatedValues },
+        comment: needsComment ? comment.trim() : "",
       };
       setLatestCalculation(record);
       await addCalculation(record);
@@ -205,7 +211,7 @@ const CalculatorDashboard = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [addCalculation, calculatedValues, inputs]);
+  }, [addCalculation, calculatedValues, needsComment, comment, inputs]);
 
   const handleDelete = useCallback(
     async (id) => {
@@ -236,6 +242,93 @@ const CalculatorDashboard = () => {
     setActiveTab(tabId);
     if (tabId === "history") {
       setCurrentPage(1);
+    }
+  };
+
+  const handleToggleComment = () => {
+    setNeedsComment((prev) => {
+      const next = !prev;
+      if (!next) {
+        setComment("");
+      }
+      return next;
+    });
+  };
+
+  const handleClearAll = async () => {
+    if (!sortedHistory.length || isClearing) {
+      setFeedback({
+        type: "error",
+        message: "Нет записей для удаления",
+      });
+      return;
+    }
+
+    const allow = window.confirm(
+      "Удалить все сохраненные расчеты? Это действие нельзя отменить."
+    );
+    if (!allow) {
+      return;
+    }
+
+    try {
+      setIsClearing(true);
+      await clearAllCalculations();
+      setLatestCalculation(null);
+      setFeedback({ type: "success", message: "Все расчеты удалены" });
+    } catch (error) {
+      console.error(error);
+      setFeedback({
+        type: "error",
+        message: "Не удалось удалить все расчеты",
+      });
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  const handleExportJson = async () => {
+    if (!calculations.length || isExporting) {
+      setFeedback({
+        type: "error",
+        message: "Нет данных для экспорта",
+      });
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      const payload = JSON.stringify(calculations, null, 2);
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(payload);
+        setFeedback({
+          type: "success",
+          message: "JSON скопирован в буфер обмена",
+        });
+      } else {
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `calculations-${Date.now()}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setFeedback({
+          type: "success",
+          message: "JSON файл сохранен",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      setFeedback({
+        type: "error",
+        message: "Не удалось выгрузить JSON",
+      });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -323,6 +416,25 @@ const CalculatorDashboard = () => {
                 );
               })}
             </div>
+            <div className="mt-6 space-y-3">
+              <label className="flex items-center gap-3 text-lg text-gray-200 font-semibold">
+                <input
+                  type="checkbox"
+                  checked={needsComment}
+                  onChange={handleToggleComment}
+                  className="h-5 w-5 rounded border-gray-500 bg-gray-800 text-blue-500 focus:ring-blue-500"
+                />
+                Нужен комментарий
+              </label>
+              {needsComment ? (
+                <textarea
+                  className="w-full min-h-28 px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-gray-100 text-lg placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:border-transparent"
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  placeholder="Например: партия песка слишком влажная, добавили воду..."
+                />
+              ) : null}
+            </div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-8">
               <Button onClick={handleCalculate} disabled={isSaving}>
                 {isSaving ? "Сохранение..." : "Рассчитать"}
@@ -376,10 +488,30 @@ const CalculatorDashboard = () => {
             <span className="text-xl text-gray-300">
               Найдено записей: {sortedHistory.length}
             </span>
-            <Button variant="ghost" size="sm" onClick={handleSortToggle}>
-              Сортировка:{" "}
-              {sortOrder === "desc" ? "от новых к старым" : "от старых к новым"}
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="ghost" size="sm" onClick={handleSortToggle}>
+                Сортировка:{" "}
+                {sortOrder === "desc"
+                  ? "от новых к старым"
+                  : "от старых к новым"}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleExportJson}
+                disabled={!calculations.length || isExporting}
+              >
+                {isExporting ? "Выгрузка..." : "Выгрузить JSON"}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleClearAll}
+                disabled={!sortedHistory.length || isClearing}
+              >
+                {isClearing ? "Удаление..." : "Удалить все записи"}
+              </Button>
+            </div>
           </div>
 
           {renderHistoryContent()}

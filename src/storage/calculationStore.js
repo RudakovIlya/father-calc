@@ -111,3 +111,29 @@ export const removeCalculation = async (id) => {
     throw error;
   }
 };
+
+export const clearCalculations = async () => {
+  try {
+    const db = await openDatabase();
+
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, "readwrite");
+      const store = transaction.objectStore(STORE_NAME);
+
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+
+      transaction.onerror = () =>
+        reject(
+          new Error(transaction.error?.message || "Ошибка очистки IndexedDB")
+        );
+
+      store.clear();
+    });
+  } catch (error) {
+    console.error("Не удалось очистить расчеты:", error);
+    throw error;
+  }
+};

@@ -3,6 +3,7 @@ import {
   fetchCalculations,
   persistCalculation,
   removeCalculation,
+  clearCalculations,
 } from "../storage/calculationStore";
 
 const useCalculationHistory = () => {
@@ -58,12 +59,25 @@ const useCalculationHistory = () => {
     [refresh]
   );
 
+  const clearAllCalculations = useCallback(async () => {
+    try {
+      await clearCalculations();
+      await refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Не удалось очистить расчеты"
+      );
+      throw err;
+    }
+  }, [refresh]);
+
   return {
     calculations,
     loading,
     error,
     addCalculation,
     deleteCalculation,
+    clearAllCalculations,
     refresh,
   };
 };
