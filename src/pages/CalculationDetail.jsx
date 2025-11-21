@@ -101,8 +101,6 @@ const CalculationDetail = () => {
 
   const { createdAt, inputs, results, comment } = entry;
 
-  console.log("comment", comment);
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
