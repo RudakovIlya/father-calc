@@ -26,6 +26,17 @@ const useSandCalculator = (initialState = defaultInputs) => {
     });
   }, []);
 
+  const clearFieldOnClick = useCallback((e) => {
+    const name = e.target.name;
+
+    setInputs((prev) => {
+      return {
+        ...prev,
+        [name]: "",
+      };
+    });
+  }, []);
+
   const numericInputs = useMemo(
     () => ({
       sandWithContainer: toNumber(inputs.sandWithContainer),
@@ -61,6 +72,7 @@ const useSandCalculator = (initialState = defaultInputs) => {
     numericInputs,
     calculatedValues,
     setField,
+    clearFieldOnClick,
   };
 };
 

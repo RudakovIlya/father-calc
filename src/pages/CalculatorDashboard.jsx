@@ -17,7 +17,8 @@ const TABS = [
 const PAGE_SIZE = 10;
 
 const CalculatorDashboard = () => {
-  const { inputs, calculatedValues, setField } = useSandCalculator();
+  const { inputs, calculatedValues, setField, clearFieldOnClick } =
+    useSandCalculator();
   const {
     calculations,
     loading: historyLoading,
@@ -54,12 +55,14 @@ const CalculatorDashboard = () => {
     () => [
       [
         {
+          name: "sandWithContainer",
           label: "Вес песка с тарой (кг)",
           value: inputs.sandWithContainer,
           placeholder: "110",
           onChange: changeHandlers.sandWithContainer,
         },
         {
+          name: "containerWeight",
           label: "Вес тары (кг)",
           value: inputs.containerWeight,
           placeholder: "2.9",
@@ -68,18 +71,21 @@ const CalculatorDashboard = () => {
       ],
       [
         {
+          name: "targetDrySand",
           label: "Целевой вес сухого песка (кг)",
           value: inputs.targetDrySand,
           placeholder: "94",
           onChange: changeHandlers.targetDrySand,
         },
         {
+          name: "moisture",
           label: "Влажность (%)",
           value: inputs.moisture,
           placeholder: "6",
           onChange: changeHandlers.moisture,
         },
         {
+          name: "waterCementRatio",
           label: "Водоцементное соотношение (В/Ц) (литры)",
           value: inputs.waterCementRatio,
           placeholder: "13.2",
@@ -105,21 +111,6 @@ const CalculatorDashboard = () => {
     const start = (currentPage - 1) * PAGE_SIZE;
     return sortedHistory.slice(start, start + PAGE_SIZE);
   }, [currentPage, sortedHistory]);
-
-  useEffect(() => {
-    if (!sortedHistory.length) {
-      setLatestCalculation(null);
-      return;
-    }
-
-    const hasCurrent = sortedHistory.some(
-      (record) => record.id === latestCalculation?.id
-    );
-
-    if (!latestCalculation || !hasCurrent) {
-      setLatestCalculation(sortedHistory[0]);
-    }
-  }, [latestCalculation, sortedHistory]);
 
   useEffect(() => {
     if (!feedback) {
@@ -188,30 +179,35 @@ const CalculatorDashboard = () => {
     [displayedResults]
   );
 
-  const handleCalculate = useCallback(async () => {
-    try {
-      setIsSaving(true);
-      const createdAt = new Date().toISOString();
-      const record = {
-        id: createdAt,
-        createdAt,
-        inputs: { ...inputs },
-        results: { ...calculatedValues },
-        comment: needsComment ? comment.trim() : "",
-      };
-      setLatestCalculation(record);
-      await addCalculation(record);
-      setFeedback({ type: "success", message: "Расчет сохранен" });
-    } catch (error) {
-      console.error(error);
-      setFeedback({
-        type: "error",
-        message: "Не удалось сохранить расчет. Проверьте IndexedDB.",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  }, [addCalculation, calculatedValues, needsComment, comment, inputs]);
+  const handleCalculate = useCallback(
+    async (e) => {
+      e.preventDefault();
+
+      try {
+        setIsSaving(true);
+        const createdAt = new Date().toISOString();
+        const record = {
+          id: createdAt,
+          createdAt,
+          inputs: { ...inputs },
+          results: { ...calculatedValues },
+          comment: needsComment ? comment.trim() : "",
+        };
+        setLatestCalculation(record);
+        await addCalculation(record);
+        setFeedback({ type: "success", message: "Расчет сохранен" });
+      } catch (error) {
+        console.error(error);
+        setFeedback({
+          type: "error",
+          message: "Не удалось сохранить расчет. Проверьте IndexedDB.",
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [addCalculation, calculatedValues, needsComment, comment, inputs]
+  );
 
   const handleDelete = useCallback(
     async (id) => {
@@ -396,20 +392,23 @@ const CalculatorDashboard = () => {
       <Tabs tabs={TABS} activeTab={activeTab} onChange={handleTabChange} />
 
       {activeTab === "calculator" ? (
-        <>
+        <form onSubmit={handleCalculate}>
           <SectionCard title="Входные данные" className="mb-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {inputGroups.map((group) => {
                 const key = group.map((input) => input.label).join("-");
                 return (
                   <div className="space-y-5" key={key}>
-                    {group.map((input) => (
+                    {group.map((input, index) => (
                       <InputField
                         key={input.label}
+                        tabIndex={index + 1}
+                        name={input.name}
                         label={input.label}
                         value={input.value}
                         placeholder={input.placeholder}
                         onChange={input.onChange}
+                        onFocus={clearFieldOnClick}
                       />
                     ))}
                   </div>
@@ -436,7 +435,12 @@ const CalculatorDashboard = () => {
               ) : null}
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-8">
-              <Button onClick={handleCalculate} disabled={isSaving}>
+              <Button
+                tabIndex={4}
+                type="submit"
+                onClick={handleCalculate}
+                disabled={isSaving}
+              >
                 {isSaving ? "Сохранение..." : "Рассчитать"}
               </Button>
               <p className="text-base text-gray-400">
@@ -481,7 +485,7 @@ const CalculatorDashboard = () => {
               </p>
             </div>
           </SectionCard>
-        </>
+        </form>
       ) : (
         <SectionCard title="Сохраненные расчеты">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
