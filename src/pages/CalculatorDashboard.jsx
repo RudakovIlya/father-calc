@@ -155,6 +155,7 @@ const CalculatorDashboard = () => {
         description: "= Целевой вес влажного песка × Влажность%",
       },
       {
+        id: "needWater",
         label: "Необходимо добавить воды:",
         value: displayedResults?.additionalWaterNeeded ?? 0,
         unit: "литров",
@@ -166,6 +167,7 @@ const CalculatorDashboard = () => {
             : "text-red-400",
       },
       {
+        id: "deleteSand",
         label: "Необходимо удалить песка:",
         value: displayedResults?.sandToRemove ?? 0,
         unit: "кг",
@@ -196,6 +198,14 @@ const CalculatorDashboard = () => {
         setLatestCalculation(record);
         await addCalculation(record);
         setFeedback({ type: "success", message: "Расчет сохранен" });
+
+        const needWaterCard = document.getElementById("needWater");
+
+        if (needWaterCard) {
+          needWaterCard.scrollIntoView({
+            behavior: "smooth",
+          });
+        }
       } catch (error) {
         console.error(error);
         setFeedback({
@@ -454,7 +464,7 @@ const CalculatorDashboard = () => {
             {displayedResults ? (
               <div className="space-y-4">
                 {resultCards.map((card) => (
-                  <ResultCard key={card.label} {...card} />
+                  <ResultCard key={card.label} {...card} id={card?.id} />
                 ))}
               </div>
             ) : (

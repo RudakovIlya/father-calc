@@ -7,11 +7,12 @@ const ResultCard = ({
   unit,
   description,
   valueClassName = "",
+  id,
 }) => {
   const appliedColor = valueClassName || "text-white";
 
   return (
-    <div className="bg-gray-800 p-5 rounded-2xl border border-gray-700">
+    <div id={id} className="bg-gray-800 p-5 rounded-2xl border border-gray-700">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <span className="text-lg font-semibold text-gray-100">{label}</span>
         <span className={`text-2xl font-bold ${appliedColor}`.trim()}>

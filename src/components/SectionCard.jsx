@@ -1,8 +1,9 @@
 import React from "react";
 
-const SectionCard = ({ title, children, className = "" }) => {
+const SectionCard = ({ title, children, className = "", id }) => {
   return (
     <section
+      id={id}
       className={`bg-gray-800 rounded-2xl p-6 sm:p-8 shadow-2xl border border-gray-700 ${className}`.trim()}
     >
       {title ? (
